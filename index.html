@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <title>100 дней</title>
+  <title>Всего 100 дней</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
@@ -13,11 +13,19 @@
     body {
       margin: 0;
       font-family: 'Montserrat', sans-serif;
-      background: var(--tg-theme-bg-color, #f4f5f7);
-      color: var(--tg-theme-text-color, #2d3436);
+      background: #f4f5f7;
+      color: #2d3436;
       min-height: 100vh;
       overflow-x: hidden;
     }
+    /* Явно фиксируем цвета внутри карточек — независимо от тёмной темы Telegram */
+    .user-card, .card, .stat-card, .history-row { color: #2d3436 !important; }
+    .uname { color: #2d3436 !important; }
+    .task-text { color: #2d3436 !important; }
+    .task-text.done { color: #b2bec3 !important; }
+    .task-line { color: #2d3436 !important; }
+    .info-row { color: #2d3436 !important; }
+    .profile-name { color: #2d3436 !important; }
     .app { display: flex; flex-direction: column; min-height: 100vh; }
     .content {
       flex: 1;
@@ -422,7 +430,7 @@
     const alreadySubmitted = currentUser.lastActiveDay === currentDay;
 
     let html = `
-      <h1 class="app-title">100 дней</h1>
+      <h1 class="app-title">Всего 100 дней</h1>
       <div class="header">
         <div>
           <div class="header-title">📋 Мои задачи</div>
@@ -648,48 +656,101 @@
     document.getElementById('tab-info').innerHTML = `
       <div class="header">
         <div>
-          <div class="header-title">ℹ️ О челлендже</div>
-          <div class="header-sub">Всего 100 дней</div>
+          <div class="header-title">📖 Правила игры</div>
+          <div class="header-sub" style="color:#fd79a8;">КАК ПРОЙТИ ЧЕЛЛЕНДЖ</div>
         </div>
+        ${currentDay != null ? `<div class="day-badge"><div class="day-label">ДЕНЬ</div><div class="day-num">${Math.max(currentDay,1)}</div></div>` : ''}
       </div>
 
       <div class="card">
-        <div class="info-section">
-          <h3>Прогресс</h3>
-          <div class="info-row"><span>Текущий день</span><span class="info-val">${currentDay != null ? Math.max(currentDay, 1) + ' из 100' : '—'}</span></div>
-          <div class="info-row"><span>Начало</span><span class="info-val">${startDate}</span></div>
+        <div style="font-size:22px;margin-bottom:8px;">⚙️</div>
+        <div style="font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;color:#2d3436;">Как это работает?</div>
+        <div style="font-size:13px;color:#636e72;line-height:1.7;font-weight:600;">
+          1️⃣ При регистрации ты вписываешь <b style="color:#2d3436;">5 действий</b> на каждый день (изменить их потом нельзя!).<br><br>
+          2️⃣ Заходишь в приложение и ставишь галочки напротив выполненных задач.<br><br>
+          3️⃣ День считается успешным, если ты выполнил <b style="color:#2d3436;">минимум 4 из 5 заданий</b>. Одно можно пропустить.<br><br>
+          4️⃣ Дедлайн — полночь! Не успел отметить — день провален и тебе назначается штраф.
         </div>
       </div>
 
-      <div class="card">
-        <div class="info-section">
-          <h3>Правила</h3>
-          <div class="info-row" style="flex-direction:column;gap:6px;">
-            <span style="font-size:14px;line-height:1.6;">
-              Каждый день нужно выполнить свои задачи и отметить прогресс в боте или здесь.
-              Если пропустил день — получаешь долг. Долг нужно отрабатывать.
-            </span>
+      <div class="card" style="background:#f0f8ff;border-color:#74b9ff;">
+        <div style="font-size:22px;margin-bottom:8px;">✈️</div>
+        <div style="font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;color:#0984e3;">Где находится команда?</div>
+        <div style="font-size:13px;color:#2d3436;line-height:1.7;font-weight:600;">
+          Вся жизнь челленджа проходит в <b>Telegram-чате вашей группы</b>. Туда нужно скидывать видео-доказательства штрафов, поддерживать друг друга и делиться успехами.
+        </div>
+      </div>
+
+      <div class="card" style="background:#f8f7ff;border-color:#a29bfe;">
+        <div style="font-size:22px;margin-bottom:8px;">💡</div>
+        <div style="font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;color:#6c5ce7;">Лайфхак по заданиям</div>
+        <div style="font-size:13px;color:#4b4b4b;line-height:1.7;font-weight:600;">
+          Не бери 5 супер-сложных задач, иначе быстро перегоришь. Выбери одно сложное действие, а остальные 4 сделай лёгкими (<em>стакан воды, заправить постель, 10 приседаний</em>). <b>Суть — в регулярности!</b>
+        </div>
+      </div>
+
+      <div style="background:#1e272e;border-radius:16px;padding:18px;margin-bottom:12px;">
+        <div style="font-size:16px;font-weight:900;color:#fd79a8;text-transform:uppercase;margin-bottom:8px;text-align:center;">Система наказаний</div>
+        <div style="font-size:12px;color:#b2bec3;font-weight:600;margin-bottom:14px;text-align:center;line-height:1.5;">За каждый проваленный день профиль блокируется. Чтобы продолжить, выбери один из 3-х видов расплаты:</div>
+
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;margin-bottom:8px;">
+          <div style="font-size:18px;margin-bottom:6px;">💰 <span style="font-size:13px;font-weight:800;color:#fff;text-transform:uppercase;">Денежный штраф</span></div>
+          <div style="font-size:12px;color:#dfe6e9;line-height:1.6;"><b style="color:#fff;">500 рублей</b> в общую копилку. Переводить сразу не обязательно — сумма висит в статистике. В конце 100 дней команда решает, куда потратить банк.</div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;margin-bottom:8px;">
+          <div style="font-size:18px;margin-bottom:6px;">🏋️ <span style="font-size:13px;font-weight:800;color:#fff;text-transform:uppercase;">Спортивный штраф</span></div>
+          <div style="font-size:11px;color:#ff7675;font-weight:800;margin-bottom:6px;">Выбери одно, запиши на видео и скинь в ТГ-чат!</div>
+          <div style="font-size:12px;color:#dfe6e9;line-height:1.8;">
+            • <b style="color:#fff;">30 бёрпи</b><br>
+            • <b style="color:#fff;">100 прыжков "звёздочка"</b><br>
+            • <b style="color:#fff;">5 минут планки</b><br>
+            • <b style="color:#fff;">50 приседаний</b><br>
+            • <b style="color:#fff;">Пробежать 3 км</b>
           </div>
         </div>
-      </div>
 
-      <div class="card">
-        <div class="info-section">
-          <h3>Штрафы</h3>
-          <div class="info-row"><span>💰 Деньги</span><span class="info-val">в банк группы</span></div>
-          <div class="info-row"><span>🏋️ Спорт</span><span class="info-val">доп. тренировка</span></div>
-          <div class="info-row"><span>🧠 Ум</span><span class="info-val">образовательное задание</span></div>
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;margin-bottom:8px;">
+          <div style="font-size:18px;margin-bottom:6px;">🧠 <span style="font-size:13px;font-weight:800;color:#fff;text-transform:uppercase;">Умственный штраф</span></div>
+          <div style="font-size:11px;color:#ff7675;font-weight:800;margin-bottom:6px;">Выполни и отправь в ТГ-чат!</div>
+          <div style="font-size:12px;color:#dfe6e9;line-height:1.8;">
+            • <b style="color:#fff;">Стихи:</b> выучить 2 четверостишия и рассказать на видео<br>
+            • <b style="color:#fff;">Книги:</b> 10 стр. нон-фикшн + выжимка 5-7 предложений<br>
+            • <b style="color:#fff;">Алфавит</b> от Я до А в позе "стульчик"
+          </div>
+        </div>
+
+        <div style="background:rgba(0,0,0,0.2);padding:8px 12px;border-radius:8px;font-size:11px;color:#b2bec3;border-left:3px solid #a29bfe;margin-top:4px;">
+          В Рейтинге навсегда останется история того, как именно ты расплачивался (💰, 🏋️ или 🧠).
         </div>
       </div>
 
-      <div class="card">
-        <div class="info-section">
-          <h3>Контакты</h3>
-          <div class="info-row"><span>Сайт</span><span class="info-val"><a href="https://only100days.ru" style="color:#6c5ce7;text-decoration:none;">only100days.ru</a></span></div>
-          <div class="info-row"><span>Бот</span><span class="info-val"><a href="https://t.me/only100days_bot" style="color:#6c5ce7;text-decoration:none;">@only100days_bot</a></span></div>
+      <div class="card" style="background:#e8f5e9;border-color:#c8e6c9;">
+        <div style="font-size:13px;font-weight:900;text-transform:uppercase;color:#00b894;margin-bottom:8px;">✅ Что приветствуется:</div>
+        <div style="font-size:13px;color:#2e7d32;line-height:1.7;font-weight:600;">
+          • Поддерживать и мотивировать друзей в Telegram<br>
+          • Жёстко контролировать честность штрафов других<br>
+          • Быть честным с самим собой
         </div>
+      </div>
+
+      <div class="card" style="background:#ffebee;border-color:#ffcdd2;">
+        <div style="font-size:13px;font-weight:900;text-transform:uppercase;color:#d63031;margin-bottom:8px;">❌ Строго запрещено:</div>
+        <div style="font-size:13px;color:#c62828;line-height:1.7;font-weight:600;">
+          • <b>Менять задания</b> — записал в первый день, делай все 100 дней<br>
+          • <b>Врать</b> — нажал галочку, но не сделал? Обманул только себя<br>
+          • <b>Отмечать задним числом</b> — наступил новый день, старые галочки сгорели
+        </div>
+      </div>
+
+      <div class="card" style="text-align:center;">
+        <div style="font-size:28px;margin-bottom:8px;">💬</div>
+        <div style="font-size:14px;font-weight:900;margin-bottom:6px;color:#2d3436;">Остались вопросы?</div>
+        <div style="font-size:13px;color:#636e72;font-weight:600;margin-bottom:12px;">Пиши создателю напрямую!</div>
+        <a href="https://t.me/ssmolkin" style="display:block;text-decoration:none;background:linear-gradient(90deg,#00A8E8,#0088cc);color:#fff;padding:12px;border-radius:12px;font-weight:800;font-size:14px;">✈️ Написать @ssmolkin</a>
       </div>
     `;
+    tabLoaded.info = true;
   }
 
   // ========================
@@ -745,12 +806,12 @@
 
       <div class="card">
         <div class="tasks-list-title">Мои 100 задач</div>
-        ${tasks.length === 0
+        ${tasks.filter(t => t && t.trim()).length === 0
           ? '<div style="color:#b2bec3;font-size:13px;font-weight:600;text-align:center;padding:12px;">Задачи не заданы</div>'
           : tasks.map((t, i) => `
               <div class="task-line">
                 <span class="task-num">${i + 1}.</span>
-                <span>${t}</span>
+                <span style="color:#2d3436;">${t || '—'}</span>
               </div>
             `).join('')
         }
