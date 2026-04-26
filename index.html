@@ -285,10 +285,40 @@
     document.getElementById(tabId).innerHTML = `<div class="alert">${msg}</div>`;
   }
 
+  function showAuthError() {
+    const inTg = !!tg;
+    const html = `
+      <div style="padding:20px;">
+        <div style="font-size:48px;text-align:center;margin-bottom:16px;">🔐</div>
+        <div style="font-size:18px;font-weight:900;text-align:center;margin-bottom:8px;">Нужна авторизация</div>
+        <div style="font-size:14px;font-weight:600;color:#636e72;text-align:center;margin-bottom:24px;line-height:1.5;">
+          ${inTg
+            ? 'Открой приложение через кнопку меню в боте — тогда Telegram передаст твои данные.'
+            : 'Приложение работает только внутри Telegram.'}
+        </div>
+        <a href="https://t.me/only100days_bot" style="display:block;text-decoration:none;">
+          <button class="btn-main" style="margin-top:0;">
+            📱 Открыть через бота
+          </button>
+        </a>
+        ${inTg ? `<div style="margin-top:16px;font-size:11px;color:#b2bec3;text-align:center;">
+          initData: ${tg.initData ? '✅ есть' : '❌ пусто'} |
+          user: ${tg.initDataUnsafe?.user ? '✅ есть' : '❌ пусто'}
+        </div>` : ''}
+      </div>
+    `;
+    document.getElementById('tab-tasks').innerHTML = html;
+    document.getElementById('tab-leaderboard').innerHTML = html;
+    document.getElementById('tab-profile').innerHTML = html;
+  }
+
   // --- Init ---
   async function init() {
+    console.log('[init] tg:', !!tg, '| initData:', tg?.initData?.slice(0,40), '| user:', JSON.stringify(tg?.initDataUnsafe?.user));
+
     if (!telegramId) {
-      showError('tasks-loader', '❗ Открой через Telegram');
+      showAuthError();
+      renderInfo(null); // info работает без авторизации
       return;
     }
 
