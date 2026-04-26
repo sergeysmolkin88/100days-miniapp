@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
   <title>100 дней</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -640,7 +642,7 @@
   // INFO TAB
   // ========================
   function renderInfo(gData) {
-    const currentDay = gData ? getMoscowDay(gData.startDate) : '—';
+    const currentDay = gData ? getMoscowDay(gData.startDate) : null;
     const startDate = gData ? new Date(gData.startDate).toLocaleDateString('ru-RU') : '—';
 
     document.getElementById('tab-info').innerHTML = `
@@ -654,7 +656,7 @@
       <div class="card">
         <div class="info-section">
           <h3>Прогресс</h3>
-          <div class="info-row"><span>Текущий день</span><span class="info-val">${Math.max(currentDay, 1)} из 100</span></div>
+          <div class="info-row"><span>Текущий день</span><span class="info-val">${currentDay != null ? Math.max(currentDay, 1) + ' из 100' : '—'}</span></div>
           <div class="info-row"><span>Начало</span><span class="info-val">${startDate}</span></div>
         </div>
       </div>
