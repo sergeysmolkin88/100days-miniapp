@@ -285,83 +285,111 @@
     document.getElementById(tabId).innerHTML = `<div class="alert">${msg}</div>`;
   }
 
-  function showAuthError() {
-    const inTg = !!tg;
+  function showEmailLogin(errorMsg) {
     const html = `
-      <div style="padding:20px;">
-        <div style="font-size:48px;text-align:center;margin-bottom:16px;">🔐</div>
-        <div style="font-size:18px;font-weight:900;text-align:center;margin-bottom:8px;">Нужна авторизация</div>
-        <div style="font-size:14px;font-weight:600;color:#636e72;text-align:center;margin-bottom:24px;line-height:1.5;">
-          ${inTg
-            ? 'Открой приложение через кнопку меню в боте — тогда Telegram передаст твои данные.'
-            : 'Приложение работает только внутри Telegram.'}
+      <div style="padding:20px 16px;">
+        <div style="font-size:48px;text-align:center;margin-bottom:12px;">🎯</div>
+        <div style="font-size:20px;font-weight:900;text-align:center;margin-bottom:6px;">Всего 100 дней</div>
+        <div style="font-size:13px;font-weight:600;color:#636e72;text-align:center;margin-bottom:24px;line-height:1.5;">
+          Введи email, который использовал при регистрации на only100days.ru
         </div>
-        <a href="https://t.me/only100days_bot" style="display:block;text-decoration:none;">
-          <button class="btn-main" style="margin-top:0;">
-            📱 Открыть через бота
-          </button>
-        </a>
-        ${inTg ? `<div style="margin-top:16px;font-size:11px;color:#b2bec3;text-align:center;">
-          initData: ${tg.initData ? '✅ есть' : '❌ пусто'} |
-          user: ${tg.initDataUnsafe?.user ? '✅ есть' : '❌ пусто'}
-        </div>` : ''}
+        ${errorMsg ? `<div class="alert" style="margin-bottom:16px;">${errorMsg}</div>` : ''}
+        <input
+          id="email-input"
+          type="email"
+          placeholder="твой@email.ru"
+          style="width:100%;padding:14px;border:2px solid #dfe6e9;border-radius:14px;font-family:Montserrat,sans-serif;font-size:15px;font-weight:600;outline:none;margin-bottom:10px;box-sizing:border-box;"
+          onkeydown="if(event.key==='Enter')loginByEmail()"
+        >
+        <button class="btn-main" onclick="loginByEmail()" id="login-btn">Войти</button>
       </div>
     `;
     document.getElementById('tab-tasks').innerHTML = html;
-    document.getElementById('tab-leaderboard').innerHTML = html;
-    document.getElementById('tab-profile').innerHTML = html;
+    document.getElementById('tab-leaderboard').innerHTML = '<div class="loader">Войди, чтобы увидеть рейтинг</div>';
+    document.getElementById('tab-profile').innerHTML = '<div class="loader">Войди, чтобы увидеть профиль</div>';
+    setTimeout(() => document.getElementById('email-input')?.focus(), 100);
+  }
+
+  window.loginByEmail = async function() {
+    const input = document.getElementById('email-input');
+    const btn = document.getElementById('login-btn');
+    if (!input) return;
+    const email = input.value.trim().toLowerCase();
+    if (!email) return;
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Проверяем...';
+
+    try {
+      await signInAnonymously(auth).catch(() => {});
+      const snap = await getDocs(query(collection(db, "users"), where("email", "==", email)));
+      if (snap.empty) {
+        showEmailLogin('❌ Email не найден. Проверь правильность или зарегистрируйся на only100days.ru');
+        return;
+      }
+
+      currentUserDocId = snap.docs[0].id;
+      currentUser = snap.docs[0].data();
+
+      // Сохраняем email в localStorage для быстрого входа в следующий раз
+      try { localStorage.setItem('100days_email', email); } catch(e) {}
+
+      // Если есть telegramId из Telegram — привязываем его к профилю
+      if (telegramId && !currentUser.telegramId) {
+        await updateDoc(doc(db, "users", currentUserDocId), {
+          telegramId: Number(telegramId) || telegramId,
+          telegramUsername: tg?.initDataUnsafe?.user?.username || '',
+        }).catch(() => {});
+        currentUser.telegramId = telegramId;
+      }
+
+      await loadAndRender();
+    } catch(e) {
+      console.error('[loginByEmail]', e);
+      showEmailLogin('⚠️ Ошибка соединения, попробуй ещё раз');
+    }
+  };
+
+  async function findUser() {
+    // 1. Попытка по telegramId из Telegram
+    if (telegramId) {
+      for (const val of [telegramId, Number(telegramId)]) {
+        const snap = await getDocs(query(collection(db, "users"), where("telegramId", "==", val)));
+        if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
+      }
+    }
+    // 2. Попытка по сохранённому email
+    try {
+      const savedEmail = localStorage.getItem('100days_email');
+      if (savedEmail) {
+        const snap = await getDocs(query(collection(db, "users"), where("email", "==", savedEmail)));
+        if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  async function loadAndRender() {
+    const groupDoc = await getDoc(doc(db, "groups", currentUser.groupId));
+    if (groupDoc.exists()) groupData = groupDoc.data();
+    const usersSnap = await getDocs(query(collection(db, "users"), where("groupId", "==", currentUser.groupId)));
+    allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderTasks();
+    tabLoaded.tasks = true;
   }
 
   // --- Init ---
   async function init() {
-    console.log('[init] tg:', !!tg, '| initData:', tg?.initData?.slice(0,40), '| user:', JSON.stringify(tg?.initDataUnsafe?.user));
-
-    if (!telegramId) {
-      showAuthError();
-      renderInfo(null); // info работает без авторизации
-      return;
-    }
-
-    try {
-      await signInAnonymously(auth);
-    } catch(e) {
-      // continue anyway, some Firestore rules may allow reads
-    }
-
-    // Find user by telegramId
-    const q = query(collection(db, "users"), where("telegramId", "==", telegramId));
-    const snap = await getDocs(q);
-
-    if (snap.empty) {
-      // Try string comparison as fallback (telegramId stored as number)
-      const q2 = query(collection(db, "users"), where("telegramId", "==", Number(telegramId)));
-      const snap2 = await getDocs(q2);
-      if (snap2.empty) {
-        showError('tasks-loader', '❗ Сначала зарегистрируйся в боте @only100days_bot');
-        document.getElementById('lb-loader').innerHTML = '<div class="alert">Нужна регистрация в боте</div>';
-        document.getElementById('info-loader').innerHTML = '';
-        document.getElementById('profile-loader').innerHTML = '<div class="alert">Нужна регистрация в боте</div>';
-        renderInfo(null);
-        return;
-      }
-      currentUserDocId = snap2.docs[0].id;
-      currentUser = snap2.docs[0].data();
+    await signInAnonymously(auth).catch(() => {});
+    const found = await findUser();
+    if (found) {
+      currentUserDocId = found.id;
+      currentUser = found;
+      await loadAndRender();
     } else {
-      currentUserDocId = snap.docs[0].id;
-      currentUser = snap.docs[0].data();
+      showEmailLogin();
+      renderInfo(null);
     }
-
-    // Load group
-    const groupDoc = await getDoc(doc(db, "groups", currentUser.groupId));
-    if (groupDoc.exists()) groupData = groupDoc.data();
-
-    // Load all users in group
-    const usersSnap = await getDocs(query(collection(db, "users"), where("groupId", "==", currentUser.groupId)));
-    allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    // Render first tab
-    renderTasks();
-    tabLoaded.tasks = true;
   }
 
   // --- Tab switching ---
