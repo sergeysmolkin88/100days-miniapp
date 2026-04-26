@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>100 дней</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: 'Montserrat', sans-serif;
+      background: var(--tg-theme-bg-color, #f4f5f7);
+      color: var(--tg-theme-text-color, #2d3436);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .app { display: flex; flex-direction: column; min-height: 100vh; }
+    .content {
+      flex: 1;
+      padding: 16px 16px 80px 16px;
+      overflow-y: auto;
+    }
+    /* Bottom Nav */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #fff;
+      border-top: 1px solid #f1f2f6;
+      display: flex;
+      z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    .nav-btn {
+      flex: 1; border: none; background: none;
+      padding: 10px 4px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10px; font-weight: 800;
+      text-transform: uppercase;
+      color: #b2bec3;
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      transition: 0.15s;
+    }
+    .nav-btn .nav-icon { font-size: 20px; line-height: 1; }
+    .nav-btn.active { color: #6c5ce7; }
+    /* Tabs */
+    .tab { display: none; }
+    .tab.active { display: block; }
+    /* Header */
+    .header {
+      background: #1e272e;
+      padding: 16px;
+      border-radius: 16px;
+      margin-bottom: 16px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-title { font-size: 18px; font-weight: 900; }
+    .header-sub { font-size: 11px; color: #b2bec3; font-weight: 600; margin-top: 3px; }
+    .day-badge {
+      background: rgba(255,255,255,0.1);
+      padding: 8px 12px; border-radius: 12px; text-align: center;
+    }
+    .day-badge .day-num { font-size: 20px; font-weight: 900; color: #fd79a8; }
+    .day-badge .day-label { font-size: 10px; color: #b2bec3; font-weight: 800; }
+    /* Cards */
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      border: 2px solid #f1f2f6;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .card.highlight { border-color: #a29bfe; background: #f8f7ff; }
+    /* Task checkboxes */
+    .task-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px dashed #dfe6e9;
+      cursor: pointer;
+    }
+    .task-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .task-check {
+      width: 28px; height: 28px; border-radius: 8px;
+      border: 2px solid #dfe6e9;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 16px;
+      transition: 0.15s;
+    }
+    .task-check.done { background: #00b894; border-color: #00b894; color: white; }
+    .task-text { font-size: 14px; font-weight: 600; line-height: 1.4; flex: 1; }
+    .task-text.done { text-decoration: line-through; color: #b2bec3; }
+    /* Progress bar */
+    .progress-wrap { margin-bottom: 16px; }
+    .progress-label { font-size: 12px; font-weight: 800; color: #636e72; margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .progress-bar { height: 8px; background: #f1f2f6; border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #a29bfe, #fd79a8); transition: width 0.3s; }
+    /* Submit button */
+    .btn-main {
+      width: 100%; padding: 14px; border: none; border-radius: 14px;
+      background: linear-gradient(90deg, #6c5ce7, #a29bfe);
+      color: white; font-family: 'Montserrat', sans-serif;
+      font-size: 15px; font-weight: 900; cursor: pointer;
+      transition: 0.15s; margin-top: 8px;
+    }
+    .btn-main:active { opacity: 0.85; transform: scale(0.98); }
+    .btn-main:disabled { background: #dfe6e9; color: #b2bec3; cursor: default; transform: none; }
+    /* Leaderboard */
+    .user-card {
+      background: #fff; border-radius: 16px;
+      border: 2px solid #f1f2f6; padding: 14px;
+      margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .user-card.is-me { border-color: #a29bfe; background: #f8f7ff; }
+    .uc-top { display: flex; align-items: center; margin-bottom: 10px; }
+    .rank { font-size: 18px; width: 28px; text-align: center; font-weight: 900; color: #b2bec3; margin-right: 8px; }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #a29bfe, #fd79a8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 900; color: white;
+      margin-right: 10px; flex-shrink: 0;
+    }
+    .uname { font-size: 15px; font-weight: 900; flex: 1; }
+    .me-badge {
+      background: #a29bfe; color: white; font-size: 9px;
+      padding: 2px 7px; border-radius: 7px; text-transform: uppercase; margin-left: 6px;
+    }
+    .uc-stats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .stat-badge {
+      font-size: 11px; font-weight: 800; padding: 4px 8px;
+      border-radius: 7px; display: flex; align-items: center; gap: 3px;
+    }
+    .stat-success { color: #2e7d32; background: #e8f5e9; }
+    .stat-fail { color: #c62828; background: #ffebee; }
+    .stat-debt-1 { color: #d35400; background: #ffeaa7; }
+    .stat-debt-2 { color: #c62828; background: #ffcdd2; }
+    .history-row {
+      background: #f4f5f7; padding: 8px 10px; border-radius: 10px;
+      font-size: 14px; display: flex; align-items: center; gap: 8px;
+    }
+    .history-row-label { font-size: 9px; text-transform: uppercase; font-weight: 900; color: #b2bec3; letter-spacing: 0.5px; white-space: nowrap; }
+    /* Info tab */
+    .info-section { margin-bottom: 16px; }
+    .info-section h3 { font-size: 14px; font-weight: 900; text-transform: uppercase; color: #636e72; letter-spacing: 0.5px; margin: 0 0 10px 0; }
+    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #dfe6e9; font-size: 14px; font-weight: 600; }
+    .info-row:last-child { border-bottom: none; }
+    .info-val { font-weight: 900; color: #6c5ce7; }
+    /* Profile */
+    .profile-avatar {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: linear-gradient(135deg, #a29bfe, #fd79a8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 900; color: white;
+      margin: 0 auto 12px auto;
+    }
+    .profile-name { text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 4px; }
+    .profile-group { text-align: center; font-size: 12px; color: #636e72; font-weight: 600; margin-bottom: 16px; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .stat-card {
+      background: #fff; border-radius: 14px; border: 2px solid #f1f2f6;
+      padding: 14px; text-align: center;
+    }
+    .stat-card .sc-num { font-size: 24px; font-weight: 900; color: #6c5ce7; }
+    .stat-card .sc-label { font-size: 10px; font-weight: 800; color: #b2bec3; text-transform: uppercase; margin-top: 2px; }
+    .tasks-list-title { font-size: 12px; font-weight: 900; text-transform: uppercase; color: #b2bec3; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .task-line {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 8px 0; border-bottom: 1px dashed #dfe6e9; font-size: 13px; font-weight: 600;
+    }
+    .task-line:last-child { border-bottom: none; }
+    .task-num { color: #a29bfe; font-weight: 900; flex-shrink: 0; }
+    /* Loading / Error */
+    .loader { text-align: center; padding: 40px; color: #636e72; font-weight: 700; }
+    .alert { background: #ffebee; color: #c62828; border-radius: 12px; padding: 14px; text-align: center; font-weight: 700; font-size: 14px; margin-bottom: 12px; }
+    .app-title { text-align: center; font-size: 28px; font-weight: 900; text-transform: uppercase; background: linear-gradient(90deg, #a29bfe, #fd79a8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 16px; }
+    /* Today done banner */
+    .done-banner {
+      background: linear-gradient(135deg, #00b894, #00cec9);
+      border-radius: 14px; padding: 16px; text-align: center;
+      color: white; font-weight: 900; font-size: 16px; margin-bottom: 12px;
+    }
+    .done-banner .done-emoji { font-size: 32px; display: block; margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="content">
+    <div id="tab-tasks" class="tab active">
+      <div class="loader" id="tasks-loader">⏳ Загрузка...</div>
+    </div>
+    <div id="tab-leaderboard" class="tab">
+      <div class="loader" id="lb-loader">⏳ Загрузка...</div>
+    </div>
+    <div id="tab-info" class="tab">
+      <div class="loader" id="info-loader">⏳ Загрузка...</div>
+    </div>
+    <div id="tab-profile" class="tab">
+      <div class="loader" id="profile-loader">⏳ Загрузка...</div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="tasks" onclick="switchTab('tasks')">
+      <span class="nav-icon">✅</span>Задачи
+    </button>
+    <button class="nav-btn" data-tab="leaderboard" onclick="switchTab('leaderboard')">
+      <span class="nav-icon">🏆</span>Рейтинг
+    </button>
+    <button class="nav-btn" data-tab="info" onclick="switchTab('info')">
+      <span class="nav-icon">ℹ️</span>Инфо
+    </button>
+    <button class="nav-btn" data-tab="profile" onclick="switchTab('profile')">
+      <span class="nav-icon">😎</span>Профиль
+    </button>
+  </nav>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, getDocs, updateDoc,
+    collection, query, where
+  } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB2g2eh9COqroFc3K6HTPPL-dn4U0IXVdk",
+    authDomain: "days-challenge-d739b.firebaseapp.com",
+    projectId: "days-challenge-d739b",
+    storageBucket: "days-challenge-d739b.firebasestorage.app"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const auth = getAuth(fbApp);
+  const db = getFirestore(fbApp);
+
+  // Telegram WebApp
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.ready(); tg.expand(); }
+
+  const tgUser = tg?.initDataUnsafe?.user;
+  const telegramId = tgUser ? String(tgUser.id) : null;
+
+  // App state
+  let currentUser = null;       // Firestore doc data
+  let currentUserDocId = null;  // Firestore doc id
+  let groupData = null;
+  let allUsers = [];
+  let tabLoaded = { tasks: false, leaderboard: false, info: false, profile: false };
+
+  function getMoscowDay(startDateStr) {
+    const start = new Date(startDateStr);
+    start.setHours(0, 0, 0, 0);
+    const nowMoscow = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Moscow" }));
+    nowMoscow.setHours(0, 0, 0, 0);
+    return Math.floor((nowMoscow - start) / 86400000) + 1;
+  }
+
+  function getInitials(name) {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  }
+
+  function formatHistory(arr) {
+    if (!arr || arr.length === 0) return "<span style='color:#b2bec3;font-size:12px;'>Пока без расплат 😇</span>";
+    let counts = { money: 0, sport: 0, mind: 0, telegram: 0 };
+    arr.forEach(i => { if (counts[i] !== undefined) counts[i]++; });
+    counts.sport += counts.telegram;
+    let result = [];
+    if (counts.money > 0) result.push(counts.money > 3 ? `${counts.money}💰` : '💰'.repeat(counts.money));
+    if (counts.sport > 0) result.push(counts.sport > 3 ? `${counts.sport}🏋️` : '🏋️'.repeat(counts.sport));
+    if (counts.mind > 0)  result.push(counts.mind > 3  ? `${counts.mind}🧠`  : '🧠'.repeat(counts.mind));
+    return result.length > 0 ? result.join(' ') : "<span style='color:#b2bec3;font-size:12px;'>Пока без расплат 😇</span>";
+  }
+
+  function showError(tabId, msg) {
+    document.getElementById(tabId).innerHTML = `<div class="alert">${msg}</div>`;
+  }
+
+  // --- Init ---
+  async function init() {
+    if (!telegramId) {
+      showError('tasks-loader', '❗ Открой через Telegram');
+      return;
+    }
+
+    try {
+      await signInAnonymously(auth);
+    } catch(e) {
+      // continue anyway, some Firestore rules may allow reads
+    }
+
+    // Find user by telegramId
+    const q = query(collection(db, "users"), where("telegramId", "==", telegramId));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      // Try string comparison as fallback (telegramId stored as number)
+      const q2 = query(collection(db, "users"), where("telegramId", "==", Number(telegramId)));
+      const snap2 = await getDocs(q2);
+      if (snap2.empty) {
+        showError('tasks-loader', '❗ Сначала зарегистрируйся в боте @only100days_bot');
+        document.getElementById('lb-loader').innerHTML = '<div class="alert">Нужна регистрация в боте</div>';
+        document.getElementById('info-loader').innerHTML = '';
+        document.getElementById('profile-loader').innerHTML = '<div class="alert">Нужна регистрация в боте</div>';
+        renderInfo(null);
+        return;
+      }
+      currentUserDocId = snap2.docs[0].id;
+      currentUser = snap2.docs[0].data();
+    } else {
+      currentUserDocId = snap.docs[0].id;
+      currentUser = snap.docs[0].data();
+    }
+
+    // Load group
+    const groupDoc = await getDoc(doc(db, "groups", currentUser.groupId));
+    if (groupDoc.exists()) groupData = groupDoc.data();
+
+    // Load all users in group
+    const usersSnap = await getDocs(query(collection(db, "users"), where("groupId", "==", currentUser.groupId)));
+    allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Render first tab
+    renderTasks();
+    tabLoaded.tasks = true;
+  }
+
+  // --- Tab switching ---
+  window.switchTab = function(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelector(`[data-tab="${name}"]`).classList.add('active');
+
+    if (!currentUser && name !== 'info') return;
+
+    if (!tabLoaded[name]) {
+      tabLoaded[name] = true;
+      if (name === 'leaderboard') renderLeaderboard();
+      if (name === 'info') renderInfo(groupData);
+      if (name === 'profile') renderProfile();
+    }
+  };
+
+  // ========================
+  // TASKS TAB
+  // ========================
+  function renderTasks() {
+    const currentDay = groupData ? getMoscowDay(groupData.startDate) : 1;
+    const tasks = currentUser.tasks || [];
+    const todayProgress = [...(currentUser.todayProgress || [false,false,false,false,false])];
+    const doneCount = todayProgress.filter(Boolean).length;
+    const alreadySubmitted = currentUser.lastActiveDay === currentDay;
+
+    let html = `
+      <h1 class="app-title">100 дней</h1>
+      <div class="header">
+        <div>
+          <div class="header-title">📋 Мои задачи</div>
+          <div class="header-sub">День ${Math.max(currentDay, 1)} из 100</div>
+        </div>
+        <div class="day-badge">
+          <div class="day-label">СЕГОДНЯ</div>
+          <div class="day-num">${doneCount}/5</div>
+        </div>
+      </div>
+    `;
+
+    if (alreadySubmitted && doneCount >= 4) {
+      html += `<div class="done-banner"><span class="done-emoji">🔥</span>День засчитан! Ты молодец!</div>`;
+    }
+
+    html += `
+      <div class="progress-wrap">
+        <div class="progress-label"><span>Выполнено сегодня</span><span>${doneCount} из 5</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:${doneCount*20}%"></div></div>
+      </div>
+      <div class="card" id="tasks-card">
+    `;
+
+    if (tasks.length === 0) {
+      html += `<div style="color:#636e72;font-size:14px;font-weight:600;text-align:center;padding:20px;">Задачи не заданы. Обратись к организатору.</div>`;
+    } else {
+      tasks.forEach((task, i) => {
+        const done = todayProgress[i] || false;
+        html += `
+          <div class="task-item" onclick="toggleTask(${i})" id="task-${i}">
+            <div class="task-check ${done ? 'done' : ''}" id="check-${i}">${done ? '✓' : ''}</div>
+            <div class="task-text ${done ? 'done' : ''}" id="text-${i}">${task}</div>
+          </div>
+        `;
+      });
+    }
+
+    html += `</div>`;
+
+    if (!alreadySubmitted) {
+      html += `<button class="btn-main" id="submit-btn" onclick="submitDay()" ${doneCount === 0 ? 'disabled' : ''}>
+        ${doneCount >= 4 ? '🔥 Засчитать день!' : `Отметить (${doneCount}/5)`}
+      </button>`;
+    } else {
+      html += `<button class="btn-main" disabled>✅ День уже засчитан</button>`;
+    }
+
+    document.getElementById('tab-tasks').innerHTML = html;
+  }
+
+  window.toggleTask = async function(index) {
+    if (!currentUser || !currentUserDocId) return;
+    const currentDay = groupData ? getMoscowDay(groupData.startDate) : 1;
+    if (currentUser.lastActiveDay === currentDay) return; // already submitted
+
+    const todayProgress = [...(currentUser.todayProgress || [false,false,false,false,false])];
+    todayProgress[index] = !todayProgress[index];
+
+    // Optimistic UI
+    const checkEl = document.getElementById(`check-${index}`);
+    const textEl = document.getElementById(`text-${index}`);
+    if (checkEl) {
+      checkEl.classList.toggle('done', todayProgress[index]);
+      checkEl.textContent = todayProgress[index] ? '✓' : '';
+    }
+    if (textEl) textEl.classList.toggle('done', todayProgress[index]);
+
+    const doneCount = todayProgress.filter(Boolean).length;
+    const fillEl = document.getElementById('progress-fill');
+    if (fillEl) fillEl.style.width = (doneCount * 20) + '%';
+    const labelEl = document.querySelector('.progress-label span:last-child');
+    if (labelEl) labelEl.textContent = doneCount + ' из 5';
+
+    const submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) {
+      submitBtn.disabled = doneCount === 0;
+      submitBtn.textContent = doneCount >= 4 ? '🔥 Засчитать день!' : `Отметить (${doneCount}/5)`;
+    }
+
+    currentUser.todayProgress = todayProgress;
+
+    try {
+      await updateDoc(doc(db, "users", currentUserDocId), { todayProgress });
+    } catch(e) {
+      console.error('Error updating progress:', e);
+    }
+  };
+
+  window.submitDay = async function() {
+    if (!currentUser || !currentUserDocId) return;
+    const currentDay = groupData ? getMoscowDay(groupData.startDate) : 1;
+    if (currentUser.lastActiveDay === currentDay) return;
+
+    const todayProgress = currentUser.todayProgress || [];
+    const doneCount = todayProgress.filter(Boolean).length;
+
+    const btn = document.getElementById('submit-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Сохраняем...'; }
+
+    const history = [...(currentUser.history || [])];
+    const status = doneCount >= 4 ? 'success' : 'fail';
+    history[currentDay - 1] = status;
+
+    // Recalculate debts
+    const firstDay = currentUser.firstActiveDay || 1;
+    let failDays = 0;
+    for (let d = firstDay; d <= currentDay; d++) {
+      if (history[d - 1] !== 'success') failDays++;
+    }
+    const activeDebts = Math.max(0, failDays - (currentUser.penaltyHistory || []).length);
+
+    try {
+      await updateDoc(doc(db, "users", currentUserDocId), {
+        todayProgress,
+        lastActiveDay: currentDay,
+        history,
+        activeDebts
+      });
+      currentUser.lastActiveDay = currentDay;
+      currentUser.history = history;
+      currentUser.activeDebts = activeDebts;
+
+      if (tg) tg.HapticFeedback?.notificationOccurred('success');
+      renderTasks();
+    } catch(e) {
+      console.error('Submit error:', e);
+      if (btn) { btn.disabled = false; btn.textContent = '🔥 Засчитать день!'; }
+      alert('Ошибка сохранения. Попробуй ещё раз.');
+    }
+  };
+
+  // ========================
+  // LEADERBOARD TAB
+  // ========================
+  function renderLeaderboard() {
+    if (!currentUser || !groupData) {
+      showError('lb-loader', '❗ Нет данных');
+      return;
+    }
+
+    const currentDay = getMoscowDay(groupData.startDate);
+    const closedDays = Math.max(0, currentDay - 1);
+
+    const enriched = allUsers.map(u => {
+      const history = u.history || [];
+      const penaltyHistory = u.penaltyHistory || [];
+      let firstDay = u.firstActiveDay || null;
+      if (!firstDay) {
+        const firstRecorded = history.findIndex(s => s === 'success' || s === 'fail');
+        firstDay = firstRecorded >= 0 ? firstRecorded + 1 : 1;
+      }
+      let successDays = 0, failDays = 0;
+      for (let day = 1; day <= closedDays; day++) {
+        if (day < firstDay) continue;
+        const status = history[day - 1];
+        if (status === 'success') successDays++;
+        else failDays++;
+      }
+      const activeDebts = Math.max(0, failDays - penaltyHistory.length);
+      return { ...u, _successDays: successDays, _failDays: failDays, _activeDebts: activeDebts };
+    });
+
+    enriched.sort((a, b) => {
+      if (a._activeDebts !== b._activeDebts) return a._activeDebts - b._activeDebts;
+      return b._successDays - a._successDays;
+    });
+
+    let html = `
+      <div class="header">
+        <div>
+          <div class="header-title">🏆 Рейтинг</div>
+          <div class="header-sub">Код: ${currentUser.groupId}</div>
+        </div>
+        <div class="day-badge">
+          <div class="day-label">ДЕНЬ</div>
+          <div class="day-num">${Math.max(currentDay, 1)}</div>
+        </div>
+      </div>
+    `;
+
+    enriched.forEach((u, index) => {
+      let rank = index + 1;
+      if (rank === 1) rank = "🥇";
+      else if (rank === 2) rank = "🥈";
+      else if (rank === 3) rank = "🥉";
+
+      const isMe = u.id === currentUserDocId;
+      let debtHTML = '';
+      if (u._activeDebts === 1) debtHTML = `<div class="stat-badge stat-debt-1">🚨 Долг: 1</div>`;
+      else if (u._activeDebts >= 2) debtHTML = `<div class="stat-badge stat-debt-2">🚨 Долгов: ${u._activeDebts}</div>`;
+
+      html += `
+        <div class="user-card ${isMe ? 'is-me' : ''}">
+          <div class="uc-top">
+            <div class="rank">${rank}</div>
+            <div class="avatar">${getInitials(u.name)}</div>
+            <div class="uname">${u.name}${isMe ? '<span class="me-badge">Ты</span>' : ''}</div>
+          </div>
+          <div class="uc-stats">
+            <div class="stat-badge stat-success">✅ ${u._successDays}</div>
+            <div class="stat-badge stat-fail">❌ ${u._failDays}</div>
+            ${debtHTML}
+          </div>
+          <div class="history-row">
+            <span class="history-row-label">Расплаты:</span>
+            <span>${formatHistory(u.penaltyHistory)}</span>
+          </div>
+        </div>
+      `;
+    });
+
+    document.getElementById('tab-leaderboard').innerHTML = html;
+  }
+
+  // ========================
+  // INFO TAB
+  // ========================
+  function renderInfo(gData) {
+    const currentDay = gData ? getMoscowDay(gData.startDate) : '—';
+    const startDate = gData ? new Date(gData.startDate).toLocaleDateString('ru-RU') : '—';
+
+    document.getElementById('tab-info').innerHTML = `
+      <div class="header">
+        <div>
+          <div class="header-title">ℹ️ О челлендже</div>
+          <div class="header-sub">Всего 100 дней</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="info-section">
+          <h3>Прогресс</h3>
+          <div class="info-row"><span>Текущий день</span><span class="info-val">${Math.max(currentDay, 1)} из 100</span></div>
+          <div class="info-row"><span>Начало</span><span class="info-val">${startDate}</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="info-section">
+          <h3>Правила</h3>
+          <div class="info-row" style="flex-direction:column;gap:6px;">
+            <span style="font-size:14px;line-height:1.6;">
+              Каждый день нужно выполнить свои задачи и отметить прогресс в боте или здесь.
+              Если пропустил день — получаешь долг. Долг нужно отрабатывать.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="info-section">
+          <h3>Штрафы</h3>
+          <div class="info-row"><span>💰 Деньги</span><span class="info-val">в банк группы</span></div>
+          <div class="info-row"><span>🏋️ Спорт</span><span class="info-val">доп. тренировка</span></div>
+          <div class="info-row"><span>🧠 Ум</span><span class="info-val">образовательное задание</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="info-section">
+          <h3>Контакты</h3>
+          <div class="info-row"><span>Сайт</span><span class="info-val"><a href="https://only100days.ru" style="color:#6c5ce7;text-decoration:none;">only100days.ru</a></span></div>
+          <div class="info-row"><span>Бот</span><span class="info-val"><a href="https://t.me/only100days_bot" style="color:#6c5ce7;text-decoration:none;">@only100days_bot</a></span></div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ========================
+  // PROFILE TAB
+  // ========================
+  function renderProfile() {
+    if (!currentUser) {
+      showError('profile-loader', '❗ Нет данных');
+      return;
+    }
+
+    const currentDay = groupData ? getMoscowDay(groupData.startDate) : 1;
+    const closedDays = Math.max(0, currentDay - 1);
+    const history = currentUser.history || [];
+    const penaltyHistory = currentUser.penaltyHistory || [];
+    const firstDay = currentUser.firstActiveDay || 1;
+
+    let successDays = 0, failDays = 0;
+    for (let d = 1; d <= closedDays; d++) {
+      if (d < firstDay) continue;
+      if (history[d - 1] === 'success') successDays++;
+      else failDays++;
+    }
+    const activeDebts = Math.max(0, failDays - penaltyHistory.length);
+    const tasks = currentUser.tasks || [];
+    const completionRate = (closedDays - firstDay + 1) > 0
+      ? Math.round(successDays / Math.max(1, closedDays - firstDay + 1) * 100)
+      : 0;
+
+    document.getElementById('tab-profile').innerHTML = `
+      <div class="profile-avatar">${getInitials(currentUser.name)}</div>
+      <div class="profile-name">${currentUser.name}</div>
+      <div class="profile-group">Группа: ${currentUser.groupId}</div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="sc-num">${successDays}</div>
+          <div class="sc-label">✅ Выполнено</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-num">${failDays}</div>
+          <div class="sc-label">❌ Провалено</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-num" style="color:${activeDebts > 0 ? '#e17055' : '#00b894'}">${activeDebts}</div>
+          <div class="sc-label">🚨 Долгов</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-num">${completionRate}%</div>
+          <div class="sc-label">📈 Успех</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="tasks-list-title">Мои 100 задач</div>
+        ${tasks.length === 0
+          ? '<div style="color:#b2bec3;font-size:13px;font-weight:600;text-align:center;padding:12px;">Задачи не заданы</div>'
+          : tasks.map((t, i) => `
+              <div class="task-line">
+                <span class="task-num">${i + 1}.</span>
+                <span>${t}</span>
+              </div>
+            `).join('')
+        }
+      </div>
+
+      <div class="card">
+        <div class="tasks-list-title">История расплат</div>
+        <div style="font-size:18px;padding:4px 0;">${formatHistory(penaltyHistory)}</div>
+      </div>
+    `;
+  }
+
+  // Start
+  init().catch(e => {
+    console.error(e);
+    showError('tasks-loader', '❗ Ошибка: ' + e.message);
+  });
+</script>
+</body>
+</html>
