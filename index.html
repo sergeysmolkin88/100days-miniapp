@@ -196,6 +196,29 @@
       color: white; font-weight: 900; font-size: 16px; margin-bottom: 12px;
     }
     .done-banner .done-emoji { font-size: 32px; display: block; margin-bottom: 6px; }
+    /* 100-day grid */
+    .days-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; margin-top: 10px; }
+    .day-cell {
+      aspect-ratio: 1; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 800;
+    }
+    .day-cell.future { background: #f1f2f6; color: #b2bec3; border: 1px solid #dfe6e9; }
+    .day-cell.success { background: #55efc4; color: #2d3436; }
+    .day-cell.fail { background: #ff7675; color: white; }
+    .day-cell.current { background: #a29bfe; color: white; box-shadow: 0 2px 6px rgba(162,155,254,0.45); transform: scale(1.08); }
+    .grid-legend { display: flex; gap: 12px; font-size: 10px; font-weight: 700; color: #636e72; margin-bottom: 10px; flex-wrap: wrap; }
+    .grid-legend span { display: flex; align-items: center; gap: 4px; }
+    .grid-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    /* Reopen button */
+    .btn-reopen {
+      width: 100%; padding: 11px; border: 2px solid #a29bfe; border-radius: 14px;
+      background: transparent; color: #6c5ce7;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 13px; font-weight: 900; cursor: pointer;
+      transition: 0.15s; margin-top: 8px;
+    }
+    .btn-reopen:active { background: #f8f7ff; }
   </style>
 </head>
 <body>
@@ -422,12 +445,34 @@
   // ========================
   // TASKS TAB
   // ========================
+  function renderDaysGrid(currentDay, history) {
+    let cells = '';
+    for (let i = 1; i <= 100; i++) {
+      let cls = 'future';
+      if (i < currentDay) cls = history[i - 1] === 'success' ? 'success' : 'fail';
+      else if (i === currentDay) cls = 'current';
+      cells += `<div class="day-cell ${cls}">${i}</div>`;
+    }
+    return `
+      <div class="card" style="margin-top:12px;">
+        <div style="font-size:11px;font-weight:900;text-transform:uppercase;color:#636e72;letter-spacing:0.5px;margin-bottom:8px;">Прогресс 100 дней</div>
+        <div class="grid-legend">
+          <span><i style="background:#a29bfe;"></i>Сегодня</span>
+          <span><i style="background:#55efc4;"></i>Засчитан</span>
+          <span><i style="background:#ff7675;"></i>Провал</span>
+          <span><i style="background:#f1f2f6;border:1px solid #dfe6e9;"></i>Впереди</span>
+        </div>
+        <div class="days-grid">${cells}</div>
+      </div>
+    `;
+  }
+
   function renderTasks() {
     const currentDay = groupData ? getMoscowDay(groupData.startDate) : 1;
     const tasks = currentUser.tasks || [];
-    const todayProgress = [...(currentUser.todayProgress || [false,false,false,false,false])];
+    const todayProgress = [...(currentUser.todayProgress || [false, false, false, false, false])];
     const doneCount = todayProgress.filter(Boolean).length;
-    const alreadySubmitted = currentUser.lastActiveDay === currentDay;
+    const history = currentUser.history || [];
 
     let html = `
       <h1 class="app-title">Всего 100 дней</h1>
@@ -443,14 +488,16 @@
       </div>
     `;
 
-    if (alreadySubmitted && doneCount >= 4) {
-      html += `<div class="done-banner"><span class="done-emoji">🔥</span>День засчитан! Ты молодец!</div>`;
+    if (doneCount >= 4) {
+      html += `<div class="done-banner" id="done-banner"><span class="done-emoji">🔥</span>День будет засчитан! Ты молодец!</div>`;
+    } else {
+      html += `<div class="done-banner" id="done-banner" style="display:none;"><span class="done-emoji">🔥</span>День будет засчитан! Ты молодец!</div>`;
     }
 
     html += `
       <div class="progress-wrap">
-        <div class="progress-label"><span>Выполнено сегодня</span><span>${doneCount} из 5</span></div>
-        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:${doneCount*20}%"></div></div>
+        <div class="progress-label"><span>Выполнено сегодня</span><span id="progress-label-count">${doneCount} из 5</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:${doneCount * 20}%"></div></div>
       </div>
       <div class="card" id="tasks-card">
     `;
@@ -470,96 +517,47 @@
     }
 
     html += `</div>`;
-
-    if (!alreadySubmitted) {
-      html += `<button class="btn-main" id="submit-btn" onclick="submitDay()" ${doneCount === 0 ? 'disabled' : ''}>
-        ${doneCount >= 4 ? '🔥 Засчитать день!' : `Отметить (${doneCount}/5)`}
-      </button>`;
-    } else {
-      html += `<button class="btn-main" disabled>✅ День уже засчитан</button>`;
-    }
+    html += `<div style="text-align:center;font-size:11px;font-weight:700;color:#b2bec3;margin-top:10px;">Итог дня фиксируется автоматически в полночь 🕛</div>`;
+    html += renderDaysGrid(currentDay, history);
 
     document.getElementById('tab-tasks').innerHTML = html;
   }
 
   window.toggleTask = async function(index) {
     if (!currentUser || !currentUserDocId) return;
-    const currentDay = groupData ? getMoscowDay(groupData.startDate) : 1;
-    if (currentUser.lastActiveDay === currentDay) return; // already submitted
 
-    const todayProgress = [...(currentUser.todayProgress || [false,false,false,false,false])];
+    const todayProgress = [...(currentUser.todayProgress || [false, false, false, false, false])];
     todayProgress[index] = !todayProgress[index];
 
-    // Optimistic UI
+    // Optimistic UI — чекбокс
     const checkEl = document.getElementById(`check-${index}`);
     const textEl = document.getElementById(`text-${index}`);
-    if (checkEl) {
-      checkEl.classList.toggle('done', todayProgress[index]);
-      checkEl.textContent = todayProgress[index] ? '✓' : '';
-    }
+    if (checkEl) { checkEl.classList.toggle('done', todayProgress[index]); checkEl.textContent = todayProgress[index] ? '✓' : ''; }
     if (textEl) textEl.classList.toggle('done', todayProgress[index]);
 
+    // Прогресс-бар
     const doneCount = todayProgress.filter(Boolean).length;
     const fillEl = document.getElementById('progress-fill');
     if (fillEl) fillEl.style.width = (doneCount * 20) + '%';
-    const labelEl = document.querySelector('.progress-label span:last-child');
+    const labelEl = document.getElementById('progress-label-count');
     if (labelEl) labelEl.textContent = doneCount + ' из 5';
 
-    const submitBtn = document.getElementById('submit-btn');
-    if (submitBtn) {
-      submitBtn.disabled = doneCount === 0;
-      submitBtn.textContent = doneCount >= 4 ? '🔥 Засчитать день!' : `Отметить (${doneCount}/5)`;
-    }
+    // Бейдж в хедере
+    const dayNum = document.querySelector('.day-num');
+    if (dayNum) dayNum.textContent = doneCount + '/5';
+
+    // Баннер ≥4
+    const banner = document.getElementById('done-banner');
+    if (banner) banner.style.display = doneCount >= 4 ? 'block' : 'none';
+
+    // Вибрация Telegram
+    if (tg) tg.HapticFeedback?.impactOccurred('light');
 
     currentUser.todayProgress = todayProgress;
-
     try {
       await updateDoc(doc(db, "users", currentUserDocId), { todayProgress });
     } catch(e) {
-      console.error('Error updating progress:', e);
-    }
-  };
-
-  window.submitDay = async function() {
-    if (!currentUser || !currentUserDocId) return;
-    const currentDay = groupData ? getMoscowDay(groupData.startDate) : 1;
-    if (currentUser.lastActiveDay === currentDay) return;
-
-    const todayProgress = currentUser.todayProgress || [];
-    const doneCount = todayProgress.filter(Boolean).length;
-
-    const btn = document.getElementById('submit-btn');
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Сохраняем...'; }
-
-    const history = [...(currentUser.history || [])];
-    const status = doneCount >= 4 ? 'success' : 'fail';
-    history[currentDay - 1] = status;
-
-    // Recalculate debts
-    const firstDay = currentUser.firstActiveDay || 1;
-    let failDays = 0;
-    for (let d = firstDay; d <= currentDay; d++) {
-      if (history[d - 1] !== 'success') failDays++;
-    }
-    const activeDebts = Math.max(0, failDays - (currentUser.penaltyHistory || []).length);
-
-    try {
-      await updateDoc(doc(db, "users", currentUserDocId), {
-        todayProgress,
-        lastActiveDay: currentDay,
-        history,
-        activeDebts
-      });
-      currentUser.lastActiveDay = currentDay;
-      currentUser.history = history;
-      currentUser.activeDebts = activeDebts;
-
-      if (tg) tg.HapticFeedback?.notificationOccurred('success');
-      renderTasks();
-    } catch(e) {
-      console.error('Submit error:', e);
-      if (btn) { btn.disabled = false; btn.textContent = '🔥 Засчитать день!'; }
-      alert('Ошибка сохранения. Попробуй ещё раз.');
+      console.error('[toggleTask]', e);
     }
   };
 
