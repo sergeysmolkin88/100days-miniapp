@@ -436,10 +436,11 @@
 
     if (!tabLoaded[name]) {
       tabLoaded[name] = true;
-      if (name === 'leaderboard') renderLeaderboard();
       if (name === 'info') renderInfo(groupData);
-      if (name === 'profile') renderProfile();
     }
+    // Рейтинг и профиль — всегда свежие
+    if (name === 'leaderboard') renderLeaderboard();
+    if (name === 'profile') renderProfile();
   };
 
   // ========================
