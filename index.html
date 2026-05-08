@@ -354,7 +354,6 @@
     btn.textContent = '⏳ Проверяем...';
 
     try {
-      await signInAnonymously(auth).catch(() => {});
       const snap = await getDocs(query(collection(db, "users"), where("email", "==", email)));
       if (snap.empty) {
         showEmailLogin('❌ Email не найден. Проверь правильность или зарегистрируйся на only100days.ru');
@@ -413,7 +412,7 @@
 
   // --- Init ---
   async function init() {
-    await signInAnonymously(auth).catch(() => {});
+    signInAnonymously(auth).catch(() => {}); // фоновая авторизация, не блокирует загрузку
     const found = await findUser();
     if (found) {
       currentUserDocId = found.id;
