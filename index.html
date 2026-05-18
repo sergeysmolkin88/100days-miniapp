@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
   <title>Всего 100 дней</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet"></noscript>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -256,7 +259,6 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
   import {
     getFirestore, doc, getDoc, getDocs, updateDoc,
     collection, query, where
@@ -270,7 +272,6 @@
   };
 
   const fbApp = initializeApp(firebaseConfig);
-  const auth = getAuth(fbApp);
   const db = getFirestore(fbApp);
 
   // Telegram WebApp
@@ -383,18 +384,20 @@
   };
 
   async function findUser() {
-    // 1. Попытка по telegramId из Telegram
+    const queries = [];
+    // По telegramId (число — так хранится в базе)
     if (telegramId) {
-      for (const val of [telegramId, Number(telegramId)]) {
-        const snap = await getDocs(query(collection(db, "users"), where("telegramId", "==", val)));
-        if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
-      }
+      queries.push(getDocs(query(collection(db, "users"), where("telegramId", "==", Number(telegramId)))));
     }
-    // 2. Попытка по сохранённому email
+    // По сохранённому email
+    const savedEmail = localStorage.getItem('100days_email');
+    if (savedEmail) {
+      queries.push(getDocs(query(collection(db, "users"), where("email", "==", savedEmail))));
+    }
+    if (!queries.length) return null;
     try {
-      const savedEmail = localStorage.getItem('100days_email');
-      if (savedEmail) {
-        const snap = await getDocs(query(collection(db, "users"), where("email", "==", savedEmail)));
+      const results = await Promise.all(queries);
+      for (const snap of results) {
         if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
       }
     } catch(e) {}
@@ -412,7 +415,6 @@
 
   // --- Init ---
   async function init() {
-    signInAnonymously(auth).catch(() => {}); // фоновая авторизация, не блокирует загрузку
     const found = await findUser();
     if (found) {
       currentUserDocId = found.id;
